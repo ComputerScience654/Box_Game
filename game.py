@@ -10,7 +10,7 @@ pygame.mixer.init()  # Initialize the mixer for sound
 # Game Constants
 WIDTH, HEIGHT = 800, 600
 FPS = 60
-TIME_LIMIT = 10  # Seconds
+BASE_TIME_LIMIT = 20  # Base time limit in seconds
 
 # Colors
 WHITE = (255, 255, 255)
@@ -19,7 +19,7 @@ BLACK = (0, 0, 0)
 # Load images
 plane_img = pygame.image.load("plane-Photoroom.png")
 meteorite_img = pygame.image.load("meteorite-Photoroom.png")
-gun_img = pygame.image.load("gune-Photoroom.png") 
+gun_img = pygame.image.load("gune-Photoroom.png")
 background_img = pygame.image.load("eart.jpg")
 
 # Load sounds
@@ -83,12 +83,6 @@ class Box(pygame.sprite.Sprite):
         super().__init__()
         self.image = meteorite_img  # กำหนดภาพของกล่อง
         self.rect = self.image.get_rect(topleft=(x, y))  # กำหนดตำแหน่งของกล่อง
-        self.speed = random.randint(1, 3)  # ความเร็วในการล่วงลงมา
-    
-    def update(self):
-        self.rect.y += self.speed  # เคลื่อนที่กล่องลง
-        if self.rect.top > HEIGHT:  # ถ้ากล่องล่วงถึงขอบล่างของหน้าจอ
-            self.kill()  # ลบกล่อง
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -166,7 +160,7 @@ def main():
     score = 0  # คะแนนเริ่มต้น
     level = 1  # เลเวลเริ่มต้น
     upgrades_taken = 0  # จำนวนการอัปเกรดที่เลือก
-    time_left = TIME_LIMIT * FPS  # เวลาที่เหลือ (เป็นจำนวนเฟรม)
+    time_left = BASE_TIME_LIMIT * FPS  # เวลาที่เหลือ (เป็นจำนวนเฟรม)
     player = Player()  # สร้างตัวละครผู้เล่น
     all_sprites = pygame.sprite.Group()  # กลุ่มของสปรายต์ทั้งหมด
     bullets = pygame.sprite.Group()  # กลุ่มของกระสุน
@@ -175,12 +169,14 @@ def main():
     
     def spawn_boxes():
         boxes.empty()  # ลบกล่องเก่าทั้งหมด
-        for _ in range(5 + level):  # สร้างกล่องใหม่ตามเลเวล
+        num_boxes = 5 + level * 2  # เพิ่มจำนวนกล่องตามเลเวล
+        for _ in range(num_boxes):  # สร้างกล่องใหม่ตามเลเวล
             box = Box(random.randint(50, WIDTH - 50), random.randint(50, HEIGHT // 2))
             boxes.add(box)  # เพิ่มกล่องในกลุ่ม
             all_sprites.add(box)  # เพิ่มกล่องในกลุ่มสปรายต์ทั้งหมด
+        return num_boxes
     
-    spawn_boxes()  # สร้างกล่องใหม่
+    num_boxes = spawn_boxes()  # สร้างกล่องใหม่
     
     while running:
         clock.tick(FPS)  # กำหนดอัตราเฟรม
@@ -205,14 +201,6 @@ def main():
                 bullet.kill()  # ลบกระสุน
                 explosion_sound.play()  # เล่นเสียงระเบิด
         
-        for box in boxes:  # สำหรับกล่องแต่ละกล่อง
-            if pygame.sprite.collide_rect(box, player):  # ตรวจสอบการชนกับผู้เล่น
-                if player.shield > 0:
-                    player.shield -= 1  # ลดเกราะของผู้เล่น
-                else:
-                    running = False  # จบเกมถ้าไม่มีเกราะ
-                box.kill()  # ลบกล่องที่ชนกับผู้เล่น
-        
         if not boxes:  # ถ้าไม่มีกล่องแล้ว
             level += 1  # เพิ่มเลเวล
             upgrades_taken += 1  # เพิ่มจำนวนการอัปเกรด
@@ -228,8 +216,8 @@ def main():
                 time_left += 10 * FPS  # เพิ่มเวลา
             elif upgrade == "Shield":
                 player.shield += 1  # เพิ่มเกราะ
-            time_left = TIME_LIMIT * FPS  # รีเซ็ตเวลา
-            spawn_boxes()  # สร้างกล่องใหม่
+            time_left = BASE_TIME_LIMIT * FPS + num_boxes * 2 * FPS  # รีเซ็ตเวลาโดยเพิ่มตามจำนวนกล่อง
+            num_boxes = spawn_boxes()  # สร้างกล่องใหม่
         
         time_left -= 1  # ลดเวลาลง
         screen.blit(background_img, (0, 0))  # วางภาพพื้นหลัง
